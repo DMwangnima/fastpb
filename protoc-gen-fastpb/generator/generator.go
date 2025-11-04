@@ -629,8 +629,13 @@ func parseTypeName(desc protoreflect.Descriptor, fdesc *descriptorpb.FileDescrip
 		pfo := desc.ParentFile().Options().(*descriptorpb.FileOptions)
 		parentGoPkg := *pfo.GoPackage
 		goPkg := string(*fdesc.Options.GoPackage)
+		parentGoPkg, alias := processFullGoPackage(parentGoPkg)
 		if parentGoPkg != goPkg {
-			name = filepath.Base(parentGoPkg) + "." + name
+			if alias == "" {
+				name = filepath.Base(parentGoPkg) + "." + name
+			} else {
+				name = alias + "." + name
+			}
 		}
 		return name
 	}
@@ -638,4 +643,11 @@ func parseTypeName(desc protoreflect.Descriptor, fdesc *descriptorpb.FileDescrip
 
 func isPointer(field *protogen.Field) (isPointer bool) {
 	return field.Oneof != nil && field.Oneof.Desc.IsSynthetic()
+}
+
+func processFullGoPackage(pkg string) (goPackage, alias string) {
+	if idx := strings.LastIndex(pkg, ";"); idx >= 0 {
+		return pkg[:idx], pkg[idx+1:]
+	}
+	return pkg, ""
 }
